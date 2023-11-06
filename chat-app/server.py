@@ -4,8 +4,13 @@ import sqlite3
 def create_database():
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
+    # サンプルで作ったやつ後で消す
     cursor.execute('CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT, password TEXT)')
     cursor.execute('INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)', ('user1', 'password123'))
+    
+    cursor.execute('CREATE TABLE IF NOt EXISTS account (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, mail TEXT, hashed_password TEXT,salt TEXT)')
+    cursor.execute('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, post TEXT, reply_id TEXT, user_id TEXT, like INTEGER)')
+    cursor.execute('CREATE TABLE IF NOT EXISTS follow (id INTEGER PRIMARY KEY AUTOINCREMENT, followid TEXT, followerid TEXT)')
     conn.commit()
     conn.close()
 
