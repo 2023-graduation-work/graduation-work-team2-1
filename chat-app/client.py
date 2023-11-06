@@ -1,26 +1,6 @@
 import socket
 import tkinter as tk
 from tkinter import messagebox
-import uuid
-
-sessions = {}
-
-def create_session():
-    session_id = str(uuid.uuid4())
-    sessions[session_id] = {}
-    return session_id
-
-def get_session(session_id):
-    # セッションIDを使用してセッションデータを取得
-    return sessions.get(session_id, {})
-
-def set_session(session_id, key, value):
-    # セッションデータに値を設定
-    if session_id in sessions:
-        sessions[session_id][key] = value
-        
-def cleanup_sessions():    
-   del sessions[session_id]
 
 def success_login():
     global root, next_page, entry_username
@@ -62,12 +42,6 @@ def login():
 
     if response == "ログイン成功":
         success_login()
-        # セッションデータを設定
-        set_session(session_id, username, 'example_user')
-
-        # セッションデータを取得
-        session_data = get_session(session_id)
-        print(session_data)
     else:
         messagebox.showerror("ログイン失敗", "ログインに失敗しました。")
 
@@ -91,9 +65,11 @@ entry_password.pack()
 login_button = tk.Button(root, text="ログイン", command=login)
 login_button.pack()
 
-#session作成
-session_id = create_session()
-
-
 # ウィンドウを実行
 root.mainloop()
+
+
+
+
+
+
