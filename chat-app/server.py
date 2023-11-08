@@ -21,9 +21,10 @@ def login(mail, password):
     conn.close()
     hashed_password = hash.sha256((password + user[3]).encode('utf-8')).hexdigest()
     if user and user[2] == hashed_password:
-        return "ログイン成功"
+        
+        return f"{user[0]}:{user[1]}:{mail}"
     else:
-        return "ログイン失敗"
+        return None
     
 def generate_salt():
     return os.urandom(16).hex()
@@ -49,6 +50,18 @@ def register(username, mail, password):
         return "ユーザー登録成功"
     else:
         return "ユーザー登録失敗"
+    
+def delete_user(userid):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM account WHERE id = ?',(userid,))
+    conn.commit()
+    changes = conn.total_changes
+    conn.close()
+    if changes == 1:
+        return '削除成功'
+    else:
+        return None
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -78,6 +91,9 @@ while True:
     elif len(info) == 3:  # This block is for registration
         username, mail, password = info
         response = register(username, mail, password)
+    elif info[1] == "delete_user":
+        userid = info[0]
+        response = delete_user(userid)
     else:
         response = "無効なデータ形式"
 
