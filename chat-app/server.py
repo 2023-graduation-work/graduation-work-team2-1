@@ -80,6 +80,20 @@ def delete_user(userid):
         conn.rollback()
         print(f'{e}')
         return f'エラーが発生しました: {e}'
+    
+def create_post(post_text, user_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    # データベースに新しい投稿を追加
+    cursor.execute('INSERT INTO posts (post, user_id) VALUES (?, ?)', (post_text, user_id))
+    conn.commit()
+    posts = conn.total_changes
+    conn.close()
+    if posts == 1:
+        return "投稿成功", post_text
+    else:
+        return "投稿失敗", None
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -112,6 +126,9 @@ while True:
     elif info[0] == "delete_user":
         str,userid = info
         response = delete_user(userid)
+    elif info[0] == "create_post":
+        str, post_text, user_id = info
+        response, _ = create_post(post_text, user_id)
     else:
         response = "無効なデータ形式"
 
