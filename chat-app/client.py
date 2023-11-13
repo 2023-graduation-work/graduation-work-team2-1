@@ -18,6 +18,9 @@ def success_login():
     
     deleteuser_button = tk.Button(next_page,text="アカウント削除",command=delete_user)
     deleteuser_button.pack()
+    
+    post_button = tk.Button(next_page, text="新規投稿", command=post)
+    post_button.pack()
 
 def logout():
     global root, next_page
@@ -130,6 +133,52 @@ def delete_user():
         messagebox.showinfo("ユーザー削除成功","ユーザー削除に成功しました。")
     else:
         messagebox.showerror(f"エラーが発生{response}",f"エラーが発生{response}")
+        
+def post():
+    global root,post_page,entry_post
+    root.withdraw()
+    post_page = tk.Toplevel()
+    post_page.geometry("400x400")
+    post_page.title("新規投稿")
+    
+    label_post = tk.Label(post_page, text="投稿内容:")
+    label_post.pack()
+    entry_post = tk.Text(post_page, height=5, width=40)  # 高さ5行、幅40文字
+    entry_post.pack()
+    
+    create_post_button = tk.Button(post_page, text="投稿", command=create_post)
+    create_post_button.pack()
+
+def create_post():
+    global root, post_page, entry_post
+    post_text = entry_post.get("1.0", "end-1c")
+
+    # サーバーに接続
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'  # サーバーのホスト名またはIPアドレス
+    server_port = 12345       # サーバーのポート番号
+    client_socket.connect((server_host, server_port))
+
+    # 新しい投稿をサーバーに送信
+    create_post_data = f'create_post:{post_text}:{userid}'
+    print(f"create_post: {create_post_data}")
+    client_socket.send(create_post_data.encode('utf-8'))
+
+    # サーバーからの応答を受信
+    response = client_socket.recv(1024).decode('utf-8')
+
+    # サーバーとの接続を閉じる
+    client_socket.close()
+
+    if response == "投稿成功":
+        post_success(post_text)
+    else:
+        messagebox.showerror("投稿失敗", "投稿の作成に失敗しました。")
+        
+def post_success(post_text):
+    global root, post_page, entry_post
+    post_page.destroy()
+    root.deiconify()
         
 # Tkinterウィンドウの作成
 root = tk.Tk()
