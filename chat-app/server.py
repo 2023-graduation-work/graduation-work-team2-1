@@ -16,15 +16,20 @@ def create_database():
 def login(mail, password):
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id,username, hashed_password,salt FROM account WHERE mail=?', (mail,))
+    cursor.execute('SELECT id, username, hashed_password, salt FROM account WHERE mail=?', (mail,))
     user = cursor.fetchone()
     conn.close()
-    hashed_password = hash.sha256((password + user[3]).encode('utf-8')).hexdigest()
-    if user and user[2] == hashed_password:
+    print(f'{user[0]}{user[1]}{user[2]}{user[3]}')
+    if user:
+        salt = user[3]
+        hashed_password = hash.sha256((password + salt).encode('utf-8')).hexdigest()
         
-        return f"{user[0]}:{user[1]}:{mail}"
-    else:
-        return None
+        if user[2] == hashed_password:
+            data = f'{user[0]}:{user[1]}:{mail}'
+            return data
+
+    return "ログイン失敗"
+
     
 def generate_salt():
     return os.urandom(16).hex()
@@ -52,16 +57,29 @@ def register(username, mail, password):
         return "ユーザー登録失敗"
     
 def delete_user(userid):
+    try:
+        userid = int(userid)
+        print(f'{userid}')
+    except ValueError:
+        return '無効なユーザーID'
+
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM account WHERE id = ?',(userid,))
-    conn.commit()
-    changes = conn.total_changes
-    conn.close()
-    if changes == 1:
-        return '削除成功'
-    else:
-        return None
+    
+    try:
+        cursor.execute('DELETE FROM account WHERE id = ?', (userid,))
+        conn.commit()
+        changes = conn.total_changes
+        conn.close()
+
+        if changes == 1:
+            return 'ユーザー削除成功'
+        else:
+            return 'ユーザー削除失敗'
+    except Exception as e:
+        conn.rollback()
+        print(f'{e}')
+        return f'エラーが発生しました: {e}'
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -85,14 +103,14 @@ while True:
         continue
 
     info = data.split(":")
-    if len(info) == 2:
-        username, password = info
+    if info[0] == "login":
+        str,username, password = info
         response = login(username, password)
-    elif len(info) == 3:  # This block is for registration
-        username, mail, password = info
+    elif info[0] == "register":  # This block is for registration
+        str,username, mail, password = info
         response = register(username, mail, password)
-    elif info[1] == "delete_user":
-        userid = info[0]
+    elif info[0] == "delete_user":
+        str,userid = info
         response = delete_user(userid)
     else:
         response = "無効なデータ形式"
