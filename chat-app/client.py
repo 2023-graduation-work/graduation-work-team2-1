@@ -2,6 +2,7 @@ import socket
 import tkinter as tk
 from tkinter import messagebox
 
+
 def success_login():
     global root, next_page
     root.withdraw()
@@ -35,7 +36,7 @@ def login():
     client_socket.connect((server_host, server_port))
 
     # ログイン情報をサーバーに送信
-    login_data = f"{mail}:{password}"
+    login_data = f"login:{mail}:{password}"
     client_socket.send(login_data.encode('utf-8'))
 
     # サーバーからの応答を受信
@@ -44,9 +45,9 @@ def login():
     # サーバーとの接続を閉じる
     client_socket.close()
 
-    if response is not None :
+    if response != "ログイン失敗" :
         data = response.split(":")
-        userid,username,usermail = data
+        userid,username,mail = data
         success_login()
     else:
         messagebox.showerror("ログイン失敗", "ログインに失敗しました。")
@@ -89,7 +90,7 @@ def register_user():
     client_socket.connect((server_host, server_port))
 
     # ユーザー登録情報をサーバーに送信
-    register_data = f"{username}:{mail}:{password}"
+    register_data = f"register:{username}:{mail}:{password}"
     print(f"register_data: {register_data}")
     client_socket.send(register_data.encode('utf-8'))
 
@@ -111,22 +112,24 @@ def success_register():
     messagebox.showinfo("ユーザー登録成功", "ユーザー登録が成功しました。")
     
 def delete_user():
+    global userid
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_host = 'localhost'  # サーバーのホスト名またはIPアドレス
     server_port = 12345       # サーバーのポート番号
     client_socket.connect((server_host, server_port))
     
     #DeleteするためのユーザーIDをサーバーに送信
-    delete_data = f'{userid}:"delete_user"'
+    delete_data = f'delete_user:{userid}'
     client_socket.send(delete_data.encode('utf-8'))
     
     response = client_socket.recv(1024).decode('utf-8')
     client_socket.close()
-    if response is not None:
+    if response == "ユーザー削除成功":
         next_page.destroy()
         root.deiconify()
+        messagebox.showinfo("ユーザー削除成功","ユーザー削除に成功しました。")
     else:
-        messagebox.showerror("ユーザー削除失敗", "ユーザー登録に削除しました。")
+        messagebox.showerror(f"エラーが発生{response}",f"エラーが発生{response}")
         
 # Tkinterウィンドウの作成
 root = tk.Tk()
@@ -153,9 +156,3 @@ register_button.pack()
 
 # ウィンドウを実行
 root.mainloop()
-
-
-
-
-
-
