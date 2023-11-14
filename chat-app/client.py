@@ -218,12 +218,33 @@ def display_user_posts():
 
             label = tk.Label(user_posts_window, text=f"Post ID: {post_id}\nPost: {post_text}")
             label.pack()
+
+            # Add a delete button for each post
+            delete_button = tk.Button(user_posts_window, text="削除", command=lambda post_id=post_id: delete_post(post_id, user_posts_window))
+            delete_button.pack()
     else:
         label = tk.Label(user_posts_window, text="You haven't made any posts yet.")
         label.pack()
 
+def delete_post(post_id, user_posts_window):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+    
+    # Send post ID to the server for deletion
+    delete_post_data = f'delete_post:{post_id}'
+    client_socket.send(delete_post_data.encode('utf-8'))
+    
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
 
-
+    if response == "投稿削除成功":
+        messagebox.showinfo("投稿削除成功", "投稿が削除されました.")
+        user_posts_window.destroy()  # Destroy the previous window
+        display_user_posts()  # Call the function to refresh the home screen
+    else:
+        messagebox.showerror("投稿削除失敗", f"投稿の削除に失敗しました: {response}")
 
         
 # Tkinterウィンドウの作成
