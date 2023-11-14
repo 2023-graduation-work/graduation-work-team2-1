@@ -94,6 +94,30 @@ def create_post(post_text, user_id):
         return "投稿成功", post_text
     else:
         return "投稿失敗", None
+    
+def delete_post(post_id):
+    try:
+        post_id = int(post_id)
+    except ValueError:
+        return '無効な投稿ID'
+
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM posts WHERE id = ?', (post_id,))
+        conn.commit()
+        changes = conn.total_changes
+        conn.close()
+
+        if changes == 1:
+            return '投稿削除成功'
+        else:
+            return '投稿削除失敗'
+    except Exception as e:
+        conn.rollback()
+        print(f'{e}')
+        return f'エラーが発生しました: {e}'
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -129,6 +153,9 @@ while True:
     elif info[0] == "create_post":
         str, post_text, user_id = info
         response, _ = create_post(post_text, user_id)
+    elif info[0] == "delete_post":
+        str,post_id = info
+        response = delete_post(post_id)
     else:
         response = "無効なデータ形式"
 
