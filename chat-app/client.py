@@ -199,26 +199,31 @@ def post_success(post_text):
 def display_user_posts():
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    
-    # Retrieve the user's posts
-    cursor.execute('SELECT post FROM posts WHERE user_id = ?', (userid,))
+
+    # Retrieve the user's posts with timestamps and user IDs
+    cursor.execute('SELECT id, post FROM posts WHERE user_id = ?', (userid,))
     user_posts = cursor.fetchall()
-    
+
     conn.close()
-    
+
     # Create a new window to display the user's posts
     user_posts_window = tk.Toplevel()
     user_posts_window.geometry("400x400")
     user_posts_window.title("Your Posts")
-    
+
     if user_posts:
-        for post in user_posts:
-            post_text = post[0]
-            label = tk.Label(user_posts_window, text=post_text)
+        for post_data in user_posts:
+            post_id = post_data[0]
+            post_text = post_data[1]
+
+            label = tk.Label(user_posts_window, text=f"Post ID: {post_id}\nPost: {post_text}")
             label.pack()
     else:
         label = tk.Label(user_posts_window, text="You haven't made any posts yet.")
         label.pack()
+
+
+
 
         
 # Tkinterウィンドウの作成
