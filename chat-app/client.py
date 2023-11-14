@@ -86,6 +86,16 @@ def register_user():
     mail = entry_newmail.get()  # Get email from entry field
     password = entry_newpassword.get()
 
+    if len(password) < 8:
+        messagebox.showerror("パスワードが短すぎます", "パスワードは少なくとも8文字必要です。")
+        return
+    
+    elif "@" not in mail:
+        messagebox.showerror(
+       
+    "無効なメールアドレス", "有効なメールアドレスを入力してください.")
+        return
+    
     # サーバーに接続
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_host = 'localhost'  # サーバーのホスト名またはIPアドレス
