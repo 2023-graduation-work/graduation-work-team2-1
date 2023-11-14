@@ -1,10 +1,12 @@
 import socket
 import tkinter as tk
 from tkinter import messagebox
+import sqlite3
 
 
 def success_login():
     global root, next_page
+
     root.withdraw()
     next_page = tk.Toplevel()
     next_page.geometry("400x400")
@@ -16,11 +18,15 @@ def success_login():
     logout_button = tk.Button(next_page, text="ログアウト", command=logout)
     logout_button.pack()
     
-    deleteuser_button = tk.Button(next_page,text="アカウント削除",command=delete_user)
+    deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
     deleteuser_button.pack()
     
     post_button = tk.Button(next_page, text="新規投稿", command=post)
     post_button.pack()
+    
+    user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
+    user_posts_button.pack()
+
 
 def logout():
     global root, next_page
@@ -186,9 +192,34 @@ def create_post():
         messagebox.showerror("投稿失敗", "投稿の作成に失敗しました。")
         
 def post_success(post_text):
-    global root, post_page, entry_post
+    global root, post_page, entry_post, next_page
     post_page.destroy()
-    root.deiconify()
+    next_page.deiconify()
+    
+def display_user_posts():
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    
+    # Retrieve the user's posts
+    cursor.execute('SELECT post FROM posts WHERE user_id = ?', (userid,))
+    user_posts = cursor.fetchall()
+    
+    conn.close()
+    
+    # Create a new window to display the user's posts
+    user_posts_window = tk.Toplevel()
+    user_posts_window.geometry("400x400")
+    user_posts_window.title("Your Posts")
+    
+    if user_posts:
+        for post in user_posts:
+            post_text = post[0]
+            label = tk.Label(user_posts_window, text=post_text)
+            label.pack()
+    else:
+        label = tk.Label(user_posts_window, text="You haven't made any posts yet.")
+        label.pack()
+
         
 # Tkinterウィンドウの作成
 root = tk.Tk()
