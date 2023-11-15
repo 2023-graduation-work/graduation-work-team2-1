@@ -1,6 +1,6 @@
 import socket
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox,ttk
 import sqlite3
 
 
@@ -211,43 +211,105 @@ def display_user_posts():
     user_posts_window.geometry("400x400")
     user_posts_window.title("Your Posts")
 
+    # Create a Treeview widget
+    tree = ttk.Treeview(user_posts_window, columns=("ID", "Post"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Post", text="Post")
+    tree.pack()
+
     if user_posts:
         for post_data in user_posts:
             post_id = post_data[0]
             post_text = post_data[1]
 
-            label = tk.Label(user_posts_window, text=f"Post ID: {post_id}\nPost: {post_text}")
-            label.pack()
+            # Insert data into the Treeview
+            tree.insert("", "end", values=(post_id, post_text))
 
-            # Add a delete button for each post
-            delete_button = tk.Button(user_posts_window, text="削除", command=lambda post_id=post_id: delete_post(post_id, user_posts_window))
-            delete_button.pack()
-    else:
-        label = tk.Label(user_posts_window, text="You haven't made any posts yet.")
-        label.pack()
+    # Add a delete button
+    delete_button = tk.Button(user_posts_window, text="選択した投稿を削除", command=lambda: delete_selected_post(tree))
+    delete_button.pack()
 
-def delete_post(post_id, user_posts_window):
+    # Bind the selection event
+    tree.bind("<ButtonRelease-1>", lambda event: on_tree_select(event, tree))
+
+def display_user_posts():
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    # Retrieve the user's posts with timestamps and user IDs
+    cursor.execute('SELECT id, post FROM posts WHERE user_id = ?', (userid,))
+    user_posts = cursor.fetchall()
+
+    conn.close()
+
+    # Create a new window to display the user's posts
+    user_posts_window = tk.Toplevel()
+    user_posts_window.geometry("400x400")
+    user_posts_window.title("Your Posts")
+
+    # Create a Treeview widget
+    tree = ttk.Treeview(user_posts_window, columns=("ID", "Post"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Post", text="Post")
+    tree.pack()
+
+    if user_posts:
+        for post_data in user_posts:
+            post_id = post_data[0]
+            post_text = post_data[1]
+
+            # Insert data into the Treeview
+            tree.insert("", "end", values=(post_id, post_text))
+
+    # Add a delete button
+    delete_button = tk.Button(user_posts_window, text="選択した投稿を削除", command=lambda: delete_selected_post(tree))
+    delete_button.pack()
+
+    # Bind the selection event
+    tree.bind("<ButtonRelease-1>", lambda event: on_tree_select(event, tree))
+
+def delete_selected_post(tree):
+    # Get the selected item
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("エラー", "削除する投稿を選択してください。")
+        return
+
+    # Get the values of the selected item (post_id, post_text)
+    values = tree.item(selected_item, "values")
+    post_id = values[0]
+
+    # Call the delete_post function with the selected post_id
+    delete_post(post_id, None, tree)
+
+def delete_post(post_id, user_posts_window, tree):
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_host = 'localhost'
     server_port = 12345
     client_socket.connect((server_host, server_port))
-    
+
     # Send post ID to the server for deletion
     delete_post_data = f'delete_post:{post_id}'
     client_socket.send(delete_post_data.encode('utf-8'))
-    
+
     response = client_socket.recv(1024).decode('utf-8')
     client_socket.close()
 
     if response == "投稿削除成功":
         messagebox.showinfo("投稿削除成功", "投稿が削除されました.")
-        user_posts_window.destroy()  # Destroy the previous window
+        if user_posts_window:
+            user_posts_window.destroy()  # Destroy the previous window
         display_user_posts()  # Call the function to refresh the home screen
     else:
         messagebox.showerror("投稿削除失敗", f"投稿の削除に失敗しました: {response}")
 
-        
-# Tkinterウィンドウの作成
+def on_tree_select(event, tree):
+    # Update the selected post_id when the selection changes
+    selected_item = tree.selection()
+    if selected_item:
+        values = tree.item(selected_item, "values")
+        post_id = values[0]
+        print(f"Selected Post ID: {post_id}")# Tkinterウィンドウの作成
 root = tk.Tk()
 root.geometry("400x400")
 root.title("ログイン")
