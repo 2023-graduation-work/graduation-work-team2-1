@@ -381,9 +381,8 @@ def search_user():
         messagebox.showerror("ユーザー検索失敗", "ユーザーが見つかりませんでした。")
         
 def search_success(data):
-    global root, search_page, entry_search
+    global search_page, entry_search
     search_page.destroy()
-    root.deiconify()
     
     search_success_page = tk.Toplevel()
     search_success_page.geometry("400x400")
