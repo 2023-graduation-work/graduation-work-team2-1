@@ -118,6 +118,22 @@ def delete_post(post_id):
         conn.rollback()
         print(f'{e}')
         return f'エラーが発生しました: {e}'
+    
+def search_user(username):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, username, mail FROM account WHERE username LIKE ?', (f"%{username}%",))
+    users = cursor.fetchall()
+    conn.close()
+
+    if users:
+        result = ""
+        for user in users:
+            result += f"{user[0]}:{user[1]}:{user[2]}\n"
+        return result.strip()
+    else:
+        return "ユーザーが見つかりませんでした"
+
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -156,6 +172,9 @@ while True:
     elif info[0] == "delete_post":
         str,post_id = info
         response = delete_post(post_id)
+    elif info[0] == "search_user":
+        str,username = info
+        response = search_user(username)
     else:
         response = "無効なデータ形式"
 

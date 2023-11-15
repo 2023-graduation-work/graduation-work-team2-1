@@ -27,6 +27,9 @@ def success_login():
     user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
     user_posts_button.pack()
 
+    search_button = tk.Button(next_page, text="ユーザー検索", command=search)
+    search_button.pack()
+
 
 def logout():
     global root, next_page
@@ -314,6 +317,91 @@ root = tk.Tk()
 root.geometry("400x400")
 root.title("ログイン")
 
+def success_login():
+    global root, next_page
+
+    root.withdraw()
+    next_page = tk.Toplevel()
+    next_page.geometry("400x400")
+    next_page.title("ホーム")
+
+    label = tk.Label(next_page, text=f"ようこそ{username}さん")
+    label.pack(pady=10)
+
+    logout_button = tk.Button(next_page, text="ログアウト", command=logout)
+    logout_button.pack()
+    
+    deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
+    deleteuser_button.pack()
+    
+    post_button = tk.Button(next_page, text="新規投稿", command=post)
+    post_button.pack()
+    
+    user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
+    user_posts_button.pack()
+    
+    search_button = tk.Button(next_page, text="ユーザー検索", command=search)
+    search_button.pack()
+
+def search():
+    global root, search_page, entry_search
+    root.withdraw()
+    search_page = tk.Toplevel()
+    search_page.geometry("400x400")
+    search_page.title("ユーザー検索")
+    
+    label_search = tk.Label(search_page, text="ユーザー名:")
+    label_search.pack()
+    entry_search = tk.Entry(search_page)
+    entry_search.pack()
+    
+    search_button = tk.Button(search_page, text="検索", command=search_user)
+    search_button.pack()    
+def search_user():
+    global root, search_page, entry_search
+    username = entry_search.get()
+    
+    # サーバーに接続
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'  # サーバーのホスト名またはIPアドレス
+    server_port = 12345       # サーバーのポート番号
+    client_socket.connect((server_host, server_port))
+    
+    #ユーザー名をサーバーに送信
+    search_data = f'search_user:{username}'
+    client_socket.send(search_data.encode('utf-8'))
+    
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+    
+    if response != "ユーザーが見つかりませんでした":
+        data = response.split("\n")
+        search_success(data)
+    else:
+        messagebox.showerror("ユーザー検索失敗", "ユーザーが見つかりませんでした。")
+        
+def search_success(data):
+    global root, search_page, entry_search
+    search_page.destroy()
+    root.deiconify()
+    
+    search_success_page = tk.Toplevel()
+    search_success_page.geometry("400x400")
+    search_success_page.title("ユーザー検索結果")
+    
+    label_search_success = tk.Label(search_success_page, text="ユーザー検索結果:")
+    label_search_success.pack()
+    
+    tree = ttk.Treeview(search_success_page, columns=("ID", "Username", "Mail"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Username", text="Username")
+    tree.heading("Mail", text="Mail")
+    tree.pack()
+    
+    for user_data in data:
+        user_id, username, mail = user_data.split(":")
+        tree.insert("", "end", values=(user_id, username, mail))
+    
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
 label_mail.pack()
