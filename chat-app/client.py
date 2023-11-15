@@ -195,44 +195,13 @@ def post_success(post_text):
     global root, post_page, entry_post, next_page
     post_page.destroy()
     next_page.deiconify()
-    
-def display_user_posts():
-    conn = sqlite3.connect('user.db')
-    cursor = conn.cursor()
 
-    # Retrieve the user's posts with timestamps and user IDs
-    cursor.execute('SELECT id, post FROM posts WHERE user_id = ?', (userid,))
-    user_posts = cursor.fetchall()
-
-    conn.close()
-
-    # Create a new window to display the user's posts
-    user_posts_window = tk.Toplevel()
-    user_posts_window.geometry("400x400")
-    user_posts_window.title("Your Posts")
-
-    # Create a Treeview widget
-    tree = ttk.Treeview(user_posts_window, columns=("ID", "Post"), show="headings")
-    tree.heading("ID", text="ID")
-    tree.heading("Post", text="Post")
-    tree.pack()
-
-    if user_posts:
-        for post_data in user_posts:
-            post_id = post_data[0]
-            post_text = post_data[1]
-
-            # Insert data into the Treeview
-            tree.insert("", "end", values=(post_id, post_text))
-
-    # Add a delete button
-    delete_button = tk.Button(user_posts_window, text="選択した投稿を削除", command=lambda: delete_selected_post(tree))
-    delete_button.pack()
-
-    # Bind the selection event
-    tree.bind("<ButtonRelease-1>", lambda event: on_tree_select(event, tree))
+user_posts_window = None
 
 def display_user_posts():
+    global user_posts_window
+    if user_posts_window:
+        user_posts_window.destroy()
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
 
@@ -298,7 +267,7 @@ def delete_post(post_id, user_posts_window, tree):
     if response == "投稿削除成功":
         messagebox.showinfo("投稿削除成功", "投稿が削除されました.")
         if user_posts_window:
-            user_posts_window.destroy()  # Destroy the previous window
+            user_posts_window.destroy()  # Destroy the window
         display_user_posts()  # Call the function to refresh the home screen
     else:
         messagebox.showerror("投稿削除失敗", f"投稿の削除に失敗しました: {response}")
