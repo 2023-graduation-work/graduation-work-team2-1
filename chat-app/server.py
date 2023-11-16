@@ -134,6 +134,29 @@ def search_user(username):
     else:
         return "ユーザーが見つかりませんでした"
 
+def search_post(post_text):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, post, user_id FROM posts WHERE post LIKE ?', (f"%{post_text}%",))
+    posts = cursor.fetchall()
+
+    if posts:
+        result = ""
+        for post in posts:
+            post_id = post[0]
+            post_content = post[1]
+            user_id = post[2]
+
+            # Fetch username associated with user_id from account table
+            cursor.execute('SELECT username FROM account WHERE id = ?', (user_id,))
+            username = cursor.fetchone()[0]
+
+            result += f"{post_id}:{username}:{post_content}\n"
+        conn.close()
+        return result.strip()
+    else:
+        conn.close()
+        return "投稿が見つかりませんでした"
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -175,6 +198,9 @@ while True:
     elif info[0] == "search_user":
         str,username = info
         response = search_user(username)
+    elif info[0] == "search_post":
+        str, post_text = info
+        response = search_post(post_text)
     else:
         response = "無効なデータ形式"
 
