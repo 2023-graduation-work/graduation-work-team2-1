@@ -14,12 +14,6 @@ def success_login():
 
     label = tk.Label(next_page, text=f"ようこそ{username}さん")
     label.pack(pady=10)
-
-    logout_button = tk.Button(next_page, text="ログアウト", command=logout)
-    logout_button.pack()
-    
-    deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
-    deleteuser_button.pack()
     
     post_button = tk.Button(next_page, text="新規投稿", command=post)
     post_button.pack()
@@ -29,7 +23,15 @@ def success_login():
 
     search_button = tk.Button(next_page, text="ユーザー検索", command=search)
     search_button.pack()
+    
+    search_button = tk.Button(next_page, text="投稿検索", command=search_posts)
+    search_button.pack()
 
+    deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
+    deleteuser_button.pack()
+    
+    logout_button = tk.Button(next_page, text="ログアウト", command=logout)
+    logout_button.pack()
 
 def logout():
     global root, next_page
@@ -282,35 +284,87 @@ def on_tree_select(event, tree):
         values = tree.item(selected_item, "values")
         post_id = values[0]
         print(f"Selected Post ID: {post_id}")# Tkinterウィンドウの作成
+        
+def get_username(user_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT username FROM account WHERE id = ?', (user_id,))
+    username = cursor.fetchone()[0]
+    conn.close()
+    return username
+        
+entry_search_post = None  # Define entry_search_post as a global variable
+
+def search_posts():
+    global root, posts_page, entry_search_post
+
+    root.withdraw()
+    posts_page = tk.Toplevel()
+    posts_page.geometry("400x200")
+    posts_page.title("投稿検索")
+
+    label_search = tk.Label(posts_page, text="投稿内容を検索:")
+    label_search.pack()
+
+    entry_search_post = tk.Entry(posts_page)
+    entry_search_post.pack()
+
+    search_button = tk.Button(posts_page, text="検索", command=search_post)
+    search_button.pack()
+    
+def search_post():
+    global entry_search_post, posts_page, search_result_window
+
+    post_text = entry_search_post.get()
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    search_data = f'search_post:{post_text}'
+    client_socket.send(search_data.encode('utf-8'))
+
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response != "投稿が見つかりませんでした":
+        display_search_result(response)
+    else:
+        messagebox.showerror("投稿検索失敗", "投稿が見つかりませんでした。")
+        
+search_result_window = None
+        
+def display_search_result(posts_data):
+    global posts_page, search_result_window
+    if search_result_window:
+        search_result_window.destroy()
+    search_result_window = tk.Toplevel()
+    search_result_window.geometry("600x400")
+    search_result_window.title("検索結果")
+
+    label_search_result = tk.Label(search_result_window, text="投稿検索結果:")
+    label_search_result.pack()
+
+    tree = ttk.Treeview(search_result_window, columns=("ID", "Username", "Post"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Username", text="Username")
+    tree.heading("Post", text="Post")
+    tree.pack()
+
+    # Split the data by newline character and iterate over each line
+    for post_data in posts_data.split("\n"):
+        # Split each line by the ":" separator
+        try:
+            post_id, username, post_text = post_data.split(":", 2)
+            tree.insert("", "end", values=(post_id, username, post_text))
+        except ValueError:
+            print("Error: Unable to split post data:", post_data)
+            continue
+        
 root = tk.Tk()
 root.geometry("400x400")
 root.title("ログイン")
-
-def success_login():
-    global root, next_page
-
-    root.withdraw()
-    next_page = tk.Toplevel()
-    next_page.geometry("400x400")
-    next_page.title("ホーム")
-
-    label = tk.Label(next_page, text=f"ようこそ{username}さん")
-    label.pack(pady=10)
-
-    logout_button = tk.Button(next_page, text="ログアウト", command=logout)
-    logout_button.pack()
-    
-    deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
-    deleteuser_button.pack()
-    
-    post_button = tk.Button(next_page, text="新規投稿", command=post)
-    post_button.pack()
-    
-    user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
-    user_posts_button.pack()
-    
-    search_button = tk.Button(next_page, text="ユーザー検索", command=search)
-    search_button.pack()
 
 def search():
     global root, search_page, entry_search
