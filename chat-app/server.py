@@ -6,10 +6,9 @@ import os
 def create_database():
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    
-    cursor.execute('CREATE TABLE IF NOt EXISTS account (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, mail TEXT, hashed_password TEXT,salt TEXT)')
+    cursor.execute('CREATE TABLE IF NOt EXISTS account (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, mail TEXT, hashed_password TEXT,salt TEXT,UNIQUE(mail))')
     cursor.execute('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, post TEXT, reply_id TEXT, user_id TEXT, like INTEGER)')
-    cursor.execute('CREATE TABLE IF NOT EXISTS follow (id INTEGER PRIMARY KEY AUTOINCREMENT, followid TEXT, followerid TEXT)')
+    cursor.execute('CREATE TABLE IF NOT EXISTS follow (id INTEGER PRIMARY KEY AUTOINCREMENT, followid TEXT, followerid TEXT,UNIQUE(followid, followerid))')
     conn.commit()
     conn.close()
 
@@ -157,7 +156,18 @@ def search_post(post_text):
     else:
         conn.close()
         return "投稿が見つかりませんでした"
-
+    
+def follow_user(followid,followerid):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO follow (followid,followerid) VALUES (?, ?)',(followid,followerid))
+    conn.commit()
+    change = conn.total_changes
+    conn.close()
+    if change == 1:
+        return "フォロー成功"
+    else:
+        return "フォロー失敗"
 # データベースの作成と初期ユーザーの追加
 create_database()
 
@@ -201,6 +211,9 @@ while True:
     elif info[0] == "search_post":
         str, post_text = info
         response = search_post(post_text)
+    elif info[0] == "follow_user":
+        str,followid,followerid = info
+        response = follow_user(followid,followerid)
     else:
         response = "無効なデータ形式"
 

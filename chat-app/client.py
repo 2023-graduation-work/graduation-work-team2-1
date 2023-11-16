@@ -423,6 +423,43 @@ def search_success(data):
     for user_data in data:
         user_id, username, mail = user_data.split(":")
         tree.insert("", "end", values=(user_id, username, mail))
+    follow_button = tk.Button(search_success_page, text="選択したユーザーをフォロー", command=lambda: follow_user(tree))
+    follow_button.pack()
+
+    # Bind the selection event
+    tree.bind("<ButtonRelease-1>", lambda event: on_tree_select(event, tree))
+    
+def follow_user(tree):
+    # Get the selected item
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("エラー", "フォローするユーザーを選択してください。")
+        return
+
+    # Get the values of the selected item (post_id, post_text)
+    values = tree.item(selected_item, "values")
+    followid = values[0]
+
+    # Call the delete_post function with the selected post_id
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    # Send post ID to the server for deletion
+    follow_user_data = f'follow_user:{followid}:{userid}'
+    client_socket.send(follow_user_data.encode('utf-8'))
+
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response == "フォロー成功":
+        messagebox.showinfo("フォロー成功", "フォローしました.")
+        if search_page:
+            search_page.destroy()  # Destroy the window
+        search_success()  # Call the function to refresh the home screen
+    else:
+        messagebox.showerror("フォロー失敗", f"フォローに失敗しました: {response}")    
     
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
