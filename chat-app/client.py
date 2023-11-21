@@ -26,6 +26,9 @@ def success_login():
     
     search_button = tk.Button(next_page, text="投稿検索", command=search_posts)
     search_button.pack()
+    
+    followed_users_button = tk.Button(next_page, text="フォローしているユーザーを表示", command=display_followed_users)
+    followed_users_button.pack()
 
     deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
     deleteuser_button.pack()
@@ -459,7 +462,59 @@ def follow_user(tree):
             search_page.destroy()  # Destroy the window
         search_success()  # Call the function to refresh the home screen
     else:
-        messagebox.showerror("フォロー失敗", f"フォローに失敗しました: {response}")    
+        messagebox.showerror("フォロー失敗", f"フォローに失敗しました: {response}") 
+        
+search_page = None
+        
+def display_followed_users():
+    global userid, search_page
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    # Send user ID to the server to retrieve followed users
+    follow_data = f'get_followed_users:{userid}'
+    client_socket.send(follow_data.encode('utf-8'))
+
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response != "フォローしているユーザーが見つかりませんでした":
+        data = response.split("\n")
+        display_followed_users_success(data)
+    else:
+        messagebox.showerror("フォローしているユーザー取得失敗", "フォローしているユーザーが見つかりませんでした。")
+
+def display_followed_users_success(data):
+    global search_page
+    
+    if search_page and search_page.winfo_exists():
+        search_page.destroy()
+    
+    search_success_page = tk.Toplevel()
+    search_success_page.geometry("650x350")
+    search_success_page.title("フォローしてるユーザー一覧")
+    
+    label_search_success = tk.Label(search_success_page, text="フォローしてるユーザー一覧:")
+    label_search_success.pack()
+    
+    tree = ttk.Treeview(search_success_page, columns=("ID", "Username", "Mail"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Username", text="Username")
+    tree.heading("Mail", text="Mail")
+    tree.pack()
+    
+    for user_data in data:
+        user_info = user_data.split(":")
+        print(f"User Info: {user_info}")  # Add a print statement to check user_info
+        if len(user_info) >= 3:
+            user_id, username, mail = user_info[:3]
+            print(f"User ID: {user_id}, Username: {username}, Mail: {mail}")  # Add a print statement for user details
+            tree.insert("", "end", values=(user_id, username, mail))
+        else:
+            print(f"Ignoring invalid user data: {user_data}")   
     
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
