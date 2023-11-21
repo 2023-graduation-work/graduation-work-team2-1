@@ -343,7 +343,7 @@ def display_search_result(posts_data):
     if search_result_window:
         search_result_window.destroy()
     search_result_window = tk.Toplevel()
-    search_result_window.geometry("600x400")
+    search_result_window.geometry("650x350")
     search_result_window.title("検索結果")
 
     label_search_result = tk.Label(search_result_window, text="投稿検索結果:")
@@ -465,9 +465,12 @@ def follow_user(tree):
         messagebox.showerror("フォロー失敗", f"フォローに失敗しました: {response}") 
         
 search_page = None
+followed_users_window = None
         
 def display_followed_users():
-    global userid, search_page
+    global userid, search_page, followed_users_window
+    if followed_users_window:
+        followed_users_window.destroy()
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_host = 'localhost'
@@ -488,19 +491,19 @@ def display_followed_users():
         messagebox.showerror("フォローしているユーザー取得失敗", "フォローしているユーザーが見つかりませんでした。")
 
 def display_followed_users_success(data):
-    global search_page
+    global followed_users_window
     
-    if search_page and search_page.winfo_exists():
-        search_page.destroy()
+    if followed_users_window and followed_users_window.winfo_exists():
+        followed_users_window.destroy()
+
+    followed_users_window = tk.Toplevel()
+    followed_users_window.geometry("650x350")
+    followed_users_window.title("フォローしてるユーザー一覧")
     
-    search_success_page = tk.Toplevel()
-    search_success_page.geometry("650x350")
-    search_success_page.title("フォローしてるユーザー一覧")
-    
-    label_search_success = tk.Label(search_success_page, text="フォローしてるユーザー一覧:")
+    label_search_success = tk.Label(followed_users_window, text="フォローしてるユーザー一覧:")
     label_search_success.pack()
     
-    tree = ttk.Treeview(search_success_page, columns=("ID", "Username", "Mail"), show="headings")
+    tree = ttk.Treeview(followed_users_window, columns=("ID", "Username", "Mail"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Mail", text="Mail")
@@ -508,13 +511,40 @@ def display_followed_users_success(data):
     
     for user_data in data:
         user_info = user_data.split(":")
-        print(f"User Info: {user_info}")  # Add a print statement to check user_info
         if len(user_info) >= 3:
             user_id, username, mail = user_info[:3]
-            print(f"User ID: {user_id}, Username: {username}, Mail: {mail}")  # Add a print statement for user details
             tree.insert("", "end", values=(user_id, username, mail))
-        else:
-            print(f"Ignoring invalid user data: {user_data}")   
+            
+    unfollow_button = tk.Button(followed_users_window, text="選択したユーザーのフォローを解除", command=lambda: unfollow_user(tree))
+    unfollow_button.pack()
+            
+def unfollow_user(tree):
+    global followed_users_window, search_page
+
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("エラー", "フォローを解除するユーザーを選択してください。")
+        return
+
+    values = tree.item(selected_item, "values")
+    follow_id = values[0]
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    unfollow_user_data = f'unfollow_user:{follow_id}:{userid}'
+    client_socket.send(unfollow_user_data.encode('utf-8'))
+
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response == "フォロー解除成功":
+        messagebox.showinfo("フォロー解除成功", "フォローを解除しました.")
+        display_followed_users()  # Refresh the followed users list
+    else:
+        messagebox.showerror("フォロー解除失敗", f"フォローを解除できませんでした: {response}")   
     
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
