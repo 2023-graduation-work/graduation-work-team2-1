@@ -179,6 +179,26 @@ def follow_user(followid, followerid):
         return "フォロー成功"
     else:
         return "フォロー失敗"
+    
+def get_followed_users(userid):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT id, username, mail FROM account WHERE id IN (SELECT followid FROM follow WHERE followerid = ?)', (userid,))
+    followed_users = cursor.fetchall()
+
+    conn.close()
+
+    if followed_users:
+        result = ""
+        for user in followed_users:
+            id = user[0]
+            username = user[1]
+            mail = user[2]
+            result += f"{id}:{username}:{mail}\n"
+        return result.strip()
+    else:
+        return "フォローしているユーザーが見つかりませんでした"
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -226,6 +246,9 @@ while True:
     elif info[0] == "follow_user":
         str,followid,followerid = info
         response = follow_user(followid,followerid)
+    elif info[0] == "get_followed_users":
+        str, userid = info
+        response = get_followed_users(userid)
     else:
         response = "無効なデータ形式"
 
