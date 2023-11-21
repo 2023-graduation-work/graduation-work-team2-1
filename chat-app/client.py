@@ -407,25 +407,32 @@ def search_user():
         messagebox.showerror("ユーザー検索失敗", "ユーザーが見つかりませんでした。")
         
 def search_success(data):
-    global search_page, entry_search
+    global search_page, entry_search, userid  # 追加：useridをグローバル変数として使用するため
+
+    # 検索ページを閉じる
     search_page.destroy()
-    
+
     search_success_page = tk.Toplevel()
-    search_success_page.geometry("400x400")
+    search_success_page.geometry("650x350")
     search_success_page.title("ユーザー検索結果")
-    
+
     label_search_success = tk.Label(search_success_page, text="ユーザー検索結果:")
     label_search_success.pack()
-    
+
     tree = ttk.Treeview(search_success_page, columns=("ID", "Username", "Mail"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Mail", text="Mail")
     tree.pack()
-    
+
     for user_data in data:
-        user_id, username, mail = user_data.split(":")
-        tree.insert("", "end", values=(user_id, username, mail))
+        user_info = user_data.split(":")
+        if len(user_info) >= 3:
+            user_id, username, mail = user_info[:3]
+            # 自分のアカウントが検索結果に含まれていない場合のみ表示
+            if user_id != str(userid):
+                tree.insert("", "end", values=(user_id, username, mail))
+            
     follow_button = tk.Button(search_success_page, text="選択したユーザーをフォロー", command=lambda: follow_user(tree))
     follow_button.pack()
 
@@ -433,34 +440,29 @@ def search_success(data):
     tree.bind("<ButtonRelease-1>", lambda event: on_tree_select(event, tree))
     
 def follow_user(tree):
-    # Get the selected item
+    global followed_users_window
+
     selected_item = tree.selection()
     if not selected_item:
         messagebox.showerror("エラー", "フォローするユーザーを選択してください。")
         return
 
-    # Get the values of the selected item (post_id, post_text)
     values = tree.item(selected_item, "values")
-    followid = values[0]
+    follow_id = values[0]
 
-    # Call the delete_post function with the selected post_id
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_host = 'localhost'
     server_port = 12345
     client_socket.connect((server_host, server_port))
 
-    # Send post ID to the server for deletion
-    follow_user_data = f'follow_user:{followid}:{userid}'
-    client_socket.send(follow_user_data.encode('utf-8'))
+    unfollow_user_data = f'follow_user:{follow_id}:{userid}'
+    client_socket.send(unfollow_user_data.encode('utf-8'))
 
     response = client_socket.recv(1024).decode('utf-8')
     client_socket.close()
 
     if response == "フォロー成功":
         messagebox.showinfo("フォロー成功", "フォローしました.")
-        if search_page:
-            search_page.destroy()  # Destroy the window
-        search_success()  # Call the function to refresh the home screen
     else:
         messagebox.showerror("フォロー失敗", f"フォローに失敗しました: {response}") 
         
