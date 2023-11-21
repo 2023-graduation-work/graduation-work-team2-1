@@ -157,17 +157,29 @@ def search_post(post_text):
         conn.close()
         return "投稿が見つかりませんでした"
     
-def follow_user(followid,followerid):
+def follow_user(followid, followerid):
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO follow (followid,followerid) VALUES (?, ?)',(followid,followerid))
+
+    # Check if the follow relationship already exists
+    cursor.execute('SELECT id FROM follow WHERE followid = ? AND followerid = ?', (followid, followerid))
+    existing_follow = cursor.fetchone()
+
+    if existing_follow:
+        conn.close()
+        return "すでにフォローしています"
+
+    # If not, add the follow relationship to the database
+    cursor.execute('INSERT INTO follow (followid, followerid) VALUES (?, ?)', (followid, followerid))
     conn.commit()
     change = conn.total_changes
     conn.close()
+
     if change == 1:
         return "フォロー成功"
     else:
         return "フォロー失敗"
+
 # データベースの作成と初期ユーザーの追加
 create_database()
 
