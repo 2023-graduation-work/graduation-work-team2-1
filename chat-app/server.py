@@ -199,6 +199,25 @@ def get_followed_users(userid):
         return result.strip()
     else:
         return "フォローしているユーザーが見つかりませんでした"
+    
+def unfollow_user(followid, followerid):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('DELETE FROM follow WHERE followid = ? AND followerid = ?', (followid, followerid))
+        conn.commit()
+        changes = conn.total_changes
+        conn.close()
+
+        if changes == 1:
+            return 'フォロー解除成功'
+        else:
+            return 'フォロー解除失敗'
+    except Exception as e:
+        conn.rollback()
+        print(f'{e}')
+        return f'エラーが発生しました: {e}'
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -249,6 +268,9 @@ while True:
     elif info[0] == "get_followed_users":
         str, userid = info
         response = get_followed_users(userid)
+    elif info[0] == "unfollow_user":
+        str, followid, followerid = info
+        response = unfollow_user(followid, followerid)
     else:
         response = "無効なデータ形式"
 
