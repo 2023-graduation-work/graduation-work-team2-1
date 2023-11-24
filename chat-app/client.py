@@ -214,6 +214,7 @@ def display_user_posts():
     global user_posts_window
     if user_posts_window:
         user_posts_window.destroy()
+        
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
 
@@ -232,17 +233,33 @@ def display_user_posts():
     tree = ttk.Treeview(user_posts_window, columns=("ID", "Post"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Post", text="Post")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Post", anchor="w")
     tree.pack()
 
     if user_posts:
         for post_data in user_posts:
-            post_id = post_data[0]
-            post_text = post_data[1]
+            post_id, post_text = post_data[0], post_data[1]
 
-            # Insert data into the Treeview
-            tree.insert("", "end", values=(post_id, post_text))
+            # Check for invalid post data
+            if not isinstance(post_id, int) or not isinstance(post_text, str):
+                print(f"Error: Invalid post data: {post_data}")
+                continue
 
-    # Add a delete button
+            # Split the post_text by newline character
+            post_lines = post_text.split('\n')
+
+            # Insert each line separately into the treeview
+            if post_lines:
+                tree.insert("", "end", values=(post_id, post_lines[0]))
+
+                # Insert subsequent lines as separate entries in the Treeview
+                for line in post_lines[1:]:
+                    tree.insert("", "end", values=("", line))
+            else:
+                # If post_text doesn't contain newlines, treat it as a single line
+                tree.insert("", "end", values=(post_id, post_text))
+
     delete_button = tk.Button(user_posts_window, text="選択した投稿を削除", command=lambda: delete_selected_post(tree))
     delete_button.pack()
 
@@ -344,8 +361,10 @@ search_result_window = None
         
 def display_search_result(posts_data):
     global posts_page, search_result_window
+
     if search_result_window:
         search_result_window.destroy()
+
     search_result_window = tk.Toplevel()
     search_result_window.geometry("650x350")
     search_result_window.title("検索結果")
@@ -357,17 +376,25 @@ def display_search_result(posts_data):
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Post", text="Post")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Username", anchor="center", width=80)
+    tree.column("Post", anchor="w")
     tree.pack()
 
     # Split the data by newline character and iterate over each line
     for post_data in posts_data.split("\n"):
-        # Split each line by the ":" separator
-        try:
-            post_id, username, post_text = post_data.split(":", 2)
-            tree.insert("", "end", values=(post_id, username, post_text))
-        except ValueError:
-            print("Error: Unable to split post data:", post_data)
-            continue
+        # Check if the post_data contains the delimiter
+        if ":" in post_data:
+            # Split each line by the ":" separator
+            try:
+                post_id, username, post_text = post_data.split(":", 2)
+                tree.insert("", "end", values=(post_id, username, post_text))
+            except ValueError:
+                print("Error: Unable to split post data:", post_data)
+                continue
+        else:
+            # If the delimiter is not found, treat the entire post_data as the post text
+            tree.insert("", "end", values=("", "", post_data))
         
 root = tk.Tk()
 root.geometry("400x400")
@@ -409,6 +436,9 @@ def search_success(data):
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Mail", text="Mail")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Username", anchor="center", width=80)
+    tree.column("Mail", anchor="center")
     tree.pack()
 
     for user_data in data:
@@ -495,6 +525,9 @@ def display_followed_users_success(data):
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Mail", text="Mail")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Username", anchor="center", width=80)
+    tree.column("Mail", anchor="center")
     tree.pack()
     
     for user_data in data:
@@ -571,17 +604,25 @@ def display_followed_users_posts(posts_data):
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Post", text="Post")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Username", anchor="center", width=80)
+    tree.column("Post", anchor="w")
     tree.pack()
 
     # Split the data by newline character and iterate over each line
     for post_data in posts_data.split("\n"):
-        # Split each line by the ":" separator
-        try:
-            post_id, username, post_text = post_data.split(":", 2)
-            tree.insert("", "end", values=(post_id, username, post_text))
-        except ValueError:
-            print("Error: Unable to split post data:", post_data)
-            continue
+        # Check if the post_data contains the delimiter
+        if ":" in post_data:
+            # Split each line by the ":" separator
+            try:
+                post_id, username, post_text = post_data.split(":", 2)
+                tree.insert("", "end", values=(post_id, username, post_text))
+            except ValueError:
+                print("Error: Unable to split post data:", post_data)
+                continue
+        else:
+            # If the delimiter is not found, treat the entire post_data as the post text
+            tree.insert("", "end", values=("", "", post_data))
 
     
 # ユーザー名とパスワードの入力フィールド
