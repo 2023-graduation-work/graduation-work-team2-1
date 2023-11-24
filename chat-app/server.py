@@ -218,6 +218,27 @@ def unfollow_user(followid, followerid):
         conn.rollback()
         print(f'{e}')
         return f'エラーが発生しました: {e}'
+    
+def get_followed_users_posts(userid):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    # Retrieve posts from users that the given user follows
+    cursor.execute('SELECT posts.id, account.username, posts.post FROM posts JOIN account ON posts.user_id = account.id WHERE posts.user_id IN (SELECT followid FROM follow WHERE followerid = ?) ORDER BY posts.id DESC', (userid,))
+    posts = cursor.fetchall()
+
+    conn.close()
+
+    if posts:
+        result = ""
+        for post in posts:
+            post_id = post[0]
+            username = post[1]
+            post_content = post[2]
+            result += f"{post_id}:{username}:{post_content}\n"
+        return result.strip()
+    else:
+        return "フォローしているユーザーの投稿が見つかりませんでした"
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -270,6 +291,9 @@ while True:
     elif info[0] == "unfollow_user":
         str, followid, followerid = info
         response = unfollow_user(followid, followerid)
+    elif info[0] == "get_followed_users_posts":
+        str, userid = info
+        response = get_followed_users_posts(userid)
     else:
         response = "無効なデータ形式"
 
