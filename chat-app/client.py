@@ -33,6 +33,10 @@ def success_login():
     deleteuser_button = tk.Button(next_page, text="アカウント削除", command=delete_user)
     deleteuser_button.pack()
     
+    tmeline_button = tk.Button(next_page, text="タイムライン", command=timeline)
+    tmeline_button.pack()
+
+    
     logout_button = tk.Button(next_page, text="ログアウト", command=logout)
     logout_button.pack()
 
@@ -529,6 +533,56 @@ def unfollow_user(tree):
         display_followed_users()  # Refresh the followed users list
     else:
         messagebox.showerror("フォロー解除失敗", f"フォローを解除できませんでした: {response}")   
+        
+def timeline():
+    # Connect to the server
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    # Send a request to get the latest posts from followed users
+    get_followed_posts_data = f'get_followed_users_posts:{userid}'
+    client_socket.send(get_followed_posts_data.encode('utf-8'))
+
+    # Receive response containing posts data
+    posts_data = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if posts_data != "フォローしているユーザーの投稿が見つかりませんでした":
+        display_followed_users_posts(posts_data)
+    else:
+        messagebox.showerror("エラー", "フォローしているユーザーの投稿が見つかりませんでした。")
+
+followed_posts_window = None
+def display_followed_users_posts(posts_data):
+    global followed_posts_window  # グローバル変数として宣言されていることを確認
+
+    if followed_posts_window:  # この行で 'followed_posts_window' を参照している
+        followed_posts_window.destroy()
+
+    followed_posts_window = tk.Toplevel()
+    followed_posts_window.geometry("650x350")
+    followed_posts_window.title("タイムライン")
+    label_followed_posts = tk.Label(followed_posts_window, text="フォローしているユーザーの最新投稿:")
+    label_followed_posts.pack()
+
+    tree = ttk.Treeview(followed_posts_window, columns=("ID", "Username", "Post"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Username", text="Username")
+    tree.heading("Post", text="Post")
+    tree.pack()
+
+    # Split the data by newline character and iterate over each line
+    for post_data in posts_data.split("\n"):
+        # Split each line by the ":" separator
+        try:
+            post_id, username, post_text = post_data.split(":", 2)
+            tree.insert("", "end", values=(post_id, username, post_text))
+        except ValueError:
+            print("Error: Unable to split post data:", post_data)
+            continue
+
     
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
