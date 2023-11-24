@@ -21,7 +21,7 @@ def success_login():
     user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
     user_posts_button.pack()
 
-    search_button = tk.Button(next_page, text="ユーザー検索", command=search)
+    search_button = tk.Button(next_page, text="ユーザー検索", command=search_user)
     search_button.pack()
     
     search_button = tk.Button(next_page, text="投稿検索", command=search_posts)
@@ -368,24 +368,8 @@ def display_search_result(posts_data):
 root = tk.Tk()
 root.geometry("400x400")
 root.title("ログイン")
-
-def search():
-    global root, search_page, entry_search
-    root.withdraw()
-    search_page = tk.Toplevel()
-    search_page.geometry("400x400")
-    search_page.title("ユーザー検索")
-    
-    label_search = tk.Label(search_page, text="ユーザー名:")
-    label_search.pack()
-    entry_search = tk.Entry(search_page)
-    entry_search.pack()
-    
-    search_button = tk.Button(search_page, text="検索", command=search_user)
-    search_button.pack()    
+  
 def search_user():
-    global root, search_page, entry_search
-    username = entry_search.get()
     
     # サーバーに接続
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -394,7 +378,7 @@ def search_user():
     client_socket.connect((server_host, server_port))
     
     #ユーザー名をサーバーに送信
-    search_data = f'search_user:{username}'
+    search_data = f'search_user'
     client_socket.send(search_data.encode('utf-8'))
     
     response = client_socket.recv(1024).decode('utf-8')
@@ -407,10 +391,8 @@ def search_user():
         messagebox.showerror("ユーザー検索失敗", "ユーザーが見つかりませんでした。")
         
 def search_success(data):
-    global search_page, entry_search, userid  # 追加：useridをグローバル変数として使用するため
+    global search_page,userid  # 追加：useridをグローバル変数として使用するため
 
-    # 検索ページを閉じる
-    search_page.destroy()
 
     search_success_page = tk.Toplevel()
     search_success_page.geometry("650x350")

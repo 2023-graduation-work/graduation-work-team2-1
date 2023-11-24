@@ -118,10 +118,10 @@ def delete_post(post_id):
         print(f'{e}')
         return f'エラーが発生しました: {e}'
     
-def search_user(username):
+def search_user():
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id, username, mail FROM account WHERE username LIKE ?', (f"%{username}%",))
+    cursor.execute('SELECT id, username, mail FROM account')
     users = cursor.fetchall()
     conn.close()
 
@@ -257,8 +257,7 @@ while True:
         str,post_id = info
         response = delete_post(post_id)
     elif info[0] == "search_user":
-        str,username = info
-        response = search_user(username)
+        response = search_user()
     elif info[0] == "search_post":
         str, post_text = info
         response = search_post(post_text)
