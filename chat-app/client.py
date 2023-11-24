@@ -21,7 +21,7 @@ def success_login():
     user_posts_button = tk.Button(next_page, text="マイポストを表示", command=display_user_posts)
     user_posts_button.pack()
 
-    search_button = tk.Button(next_page, text="ユーザー検索", command=search_user)
+    search_button = tk.Button(next_page, text="ユーザー一覧", command=search_user)
     search_button.pack()
     
     search_button = tk.Button(next_page, text="投稿検索", command=search_posts)
