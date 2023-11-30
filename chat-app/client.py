@@ -144,23 +144,31 @@ def success_register():
     
 def delete_user():
     global userid
+
+    # Ask for confirmation before deleting the user account
+    confirm = messagebox.askokcancel("確認", "本当にアカウントを削除しますか？")
+
+    if not confirm:
+        return
+
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_host = 'localhost'  # サーバーのホスト名またはIPアドレス
-    server_port = 12345       # サーバーのポート番号
+    server_host = 'localhost'
+    server_port = 12345
     client_socket.connect((server_host, server_port))
-    
-    #DeleteするためのユーザーIDをサーバーに送信
+
+    # DeleteするためのユーザーIDをサーバーに送信
     delete_data = f'delete_user:{userid}'
     client_socket.send(delete_data.encode('utf-8'))
-    
+
     response = client_socket.recv(1024).decode('utf-8')
     client_socket.close()
+
     if response == "ユーザー削除成功":
         next_page.destroy()
         root.deiconify()
-        messagebox.showinfo("ユーザー削除成功","ユーザー削除に成功しました。")
+        messagebox.showinfo("ユーザー削除成功", "ユーザー削除に成功しました。")
     else:
-        messagebox.showerror(f"エラーが発生{response}",f"エラーが発生{response}")
+        messagebox.showerror(f"エラーが発生{response}", f"エラーが発生{response}")
         
 def post():
     global root,post_page,entry_post
