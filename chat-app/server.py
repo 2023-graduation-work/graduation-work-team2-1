@@ -9,6 +9,7 @@ def create_database():
     cursor.execute('CREATE TABLE IF NOt EXISTS account (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, mail TEXT, hashed_password TEXT,salt TEXT,UNIQUE(mail))')
     cursor.execute('CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, post TEXT, reply_id TEXT, user_id TEXT, like INTEGER)')
     cursor.execute('CREATE TABLE IF NOT EXISTS follow (id INTEGER PRIMARY KEY AUTOINCREMENT, followid TEXT, followerid TEXT,UNIQUE(followid, followerid))')
+    cursor.execute('CREATE TABLE IF NOT EXISTS likes (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, user_id INTEGER, UNIQUE(post_id, user_id))')
     conn.commit()
     conn.close()
 
@@ -286,6 +287,51 @@ def get_replies(post_id):
         conn.close()
         return "この投稿にはリプライがありません"
 
+# def like_post(post_id, user_id):
+#     conn = sqlite3.connect('user.db')
+#     cursor = conn.cursor()
+
+#     try:
+#         # いいねがすでに存在するかどうかを確認
+#         cursor.execute('SELECT * FROM likes WHERE post_id = ? AND user_id = ?', (post_id, user_id))
+#         existing_like = cursor.fetchone()
+
+#         if existing_like:
+#             return "既にいいねしています"
+
+#         # データベースの該当する投稿にいいねを追加する処理
+#         cursor.execute('INSERT INTO likes (post_id, user_id) VALUES (?, ?)', (post_id, user_id))
+#         cursor.execute('UPDATE posts SET likes = likes + 1 WHERE id = ?', (post_id,))
+#         conn.commit()
+#         conn.close()
+#         return "いいねしました"
+#     except Exception as e:
+#         conn.rollback()
+#         print(f"エラーが発生しました: {e}")
+#         return f"エラーが発生しました: {e}"
+def like_post(post_id, user_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    # Check if the follow relationship already exists
+    cursor.execute('SELECT id FROM likes WHERE post_id = ? AND user_id = ?', (post_id, user_id))
+    existing_good = cursor.fetchone()
+
+    if existing_good:
+        conn.close()
+        return "すでにフォローしています"
+
+    # If not, add the follow relationship to the database
+    cursor.execute('INSERT INTO likes (post_id, user_id) VALUES (?, ?)', (post_id, user_id))
+    conn.commit()
+    change = conn.total_changes
+    conn.close()
+
+    if change == 1:
+        return "いいね成功"
+    else:
+        return "いいね失敗"
+
 # データベースの作成と初期ユーザーの追加
 create_database()
 
@@ -346,6 +392,9 @@ while True:
     elif info[0] == "get_replies":
         str, post_id = info
         response = get_replies(post_id)
+    elif info[0] == "like_post":
+        str, post_id, user_id = info
+        response = like_post(int(post_id), int(user_id))
     else:
         response = "無効なデータ形式"
 
