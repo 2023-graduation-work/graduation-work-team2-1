@@ -80,15 +80,20 @@ def delete_user(userid):
         print(f'{e}')
         return f'エラーが発生しました: {e}'
     
-def create_post(post_text, user_id):
+def create_post(post_text, user_id, reply_to_post_id=None):
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
 
-    # データベースに新しい投稿を追加
+    # Check if it's a reply to an existing post
+    if reply_to_post_id:
+        return post_reply(post_text, user_id, reply_to_post_id)
+
+    # Otherwise, treat it as a new post
     cursor.execute('INSERT INTO posts (post, user_id) VALUES (?, ?)', (post_text, user_id))
     conn.commit()
     posts = conn.total_changes
     conn.close()
+
     if posts == 1:
         return "投稿成功", post_text
     else:
@@ -136,7 +141,7 @@ def search_user():
 def search_post(post_text):
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
-    cursor.execute('SELECT id, post, user_id FROM posts WHERE post LIKE ?', (f"%{post_text}%",))
+    cursor.execute('SELECT id, post, user_id FROM posts WHERE post LIKE ? AND reply_id IS NULL', (f"%{post_text}%",))
     posts = cursor.fetchall()
 
     if posts:
@@ -223,8 +228,8 @@ def get_followed_users_posts(userid):
     conn = sqlite3.connect('user.db')
     cursor = conn.cursor()
 
-    # Retrieve posts from users that the given user follows
-    cursor.execute('SELECT posts.id, account.username, posts.post FROM posts JOIN account ON posts.user_id = account.id WHERE posts.user_id IN (SELECT followid FROM follow WHERE followerid = ?) ORDER BY posts.id DESC', (userid,))
+    # Retrieve posts from users that the given user follows, excluding replies
+    cursor.execute('SELECT posts.id, account.username, posts.post FROM posts JOIN account ON posts.user_id = account.id WHERE posts.user_id IN (SELECT followid FROM follow WHERE followerid = ?) AND posts.reply_id IS NULL ORDER BY posts.id DESC', (userid,))
     posts = cursor.fetchall()
 
     conn.close()
@@ -239,6 +244,47 @@ def get_followed_users_posts(userid):
         return result.strip()
     else:
         return "フォローしているユーザーの投稿が見つかりませんでした"
+    
+def post_reply(reply_text, user_id, reply_to_post_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    cursor.execute('INSERT INTO posts (post, reply_id, user_id) VALUES (?, ?, ?)', (reply_text, reply_to_post_id, user_id))
+    conn.commit()
+    posts = conn.total_changes
+
+    conn.close()
+
+    if posts == 1:
+        return "リプライ投稿成功"
+    else:
+        return "リプライ投稿失敗"
+
+def get_replies(post_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT id, post, user_id FROM posts WHERE reply_id = ?', (post_id,))
+    replies = cursor.fetchall()
+
+    if replies:
+        result = ""
+        for reply in replies:
+            reply_id = reply[0]
+            reply_content = reply[1]
+            reply_user_id = reply[2]
+
+            # Fetch username associated with user_id from account table for reply user
+            cursor.execute('SELECT username FROM account WHERE id = ?', (reply_user_id,))
+            reply_username = cursor.fetchone()[0]
+
+            result += f"{reply_id}:{reply_username}:{reply_content}\n"
+
+        conn.close()
+        return result.strip()
+    else:
+        conn.close()
+        return "この投稿にはリプライがありません"
 
 # データベースの作成と初期ユーザーの追加
 create_database()
@@ -294,6 +340,12 @@ while True:
     elif info[0] == "get_followed_users_posts":
         str, userid = info
         response = get_followed_users_posts(userid)
+    elif info[0] == "post_reply":
+        str, reply_text, user_id, reply_to_post_id = info
+        response = post_reply(reply_text, user_id, reply_to_post_id)
+    elif info[0] == "get_replies":
+        str, post_id = info
+        response = get_replies(post_id)
     else:
         response = "無効なデータ形式"
 

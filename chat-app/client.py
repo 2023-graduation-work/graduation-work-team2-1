@@ -362,6 +362,7 @@ def search_post():
 
     if response != "投稿が見つかりませんでした":
         display_search_result(response)
+        posts_page.destroy()
     else:
         messagebox.showerror("投稿検索失敗", "投稿が見つかりませんでした。")
         
@@ -403,6 +404,11 @@ def display_search_result(posts_data):
         else:
             # If the delimiter is not found, treat the entire post_data as the post text
             tree.insert("", "end", values=("", "", post_data))
+            
+    reply_button = tk.Button(search_result_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
+    reply_button.pack()
+    view_reply_button = tk.Button(search_result_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
+    view_reply_button.pack()
         
 root = tk.Tk()
 root.geometry("400x400")
@@ -599,7 +605,7 @@ followed_posts_window = None
 def display_followed_users_posts(posts_data):
     global followed_posts_window  # グローバル変数として宣言されていることを確認
 
-    if followed_posts_window:  # この行で 'followed_posts_window' を参照している
+    if followed_posts_window:
         followed_posts_window.destroy()
 
     followed_posts_window = tk.Toplevel()
@@ -631,8 +637,136 @@ def display_followed_users_posts(posts_data):
         else:
             # If the delimiter is not found, treat the entire post_data as the post text
             tree.insert("", "end", values=("", "", post_data))
-
+            
+    reply_button = tk.Button(followed_posts_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
+    reply_button.pack()
+    view_reply_button = tk.Button(followed_posts_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
+    view_reply_button.pack()
+            
+def reply_to_post(tree):
+    global reply_window
     
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("Error", "Please select a post to reply.")
+        return
+
+    values = tree.item(selected_item, "values")
+    post_id = values[0]
+    
+    reply_window = tk.Toplevel()
+    reply_window.geometry("400x200")
+    reply_window.title("リプライ投稿")
+
+    label_reply = tk.Label(reply_window, text="リプライ:")
+    label_reply.pack()
+
+    entry_reply = tk.Text(reply_window, height=5, width=40)
+    entry_reply.pack()
+
+    submit_reply_button = tk.Button(reply_window, text="投稿", command=lambda: submit_reply(post_id, entry_reply.get("1.0", "end-1c")))
+    submit_reply_button.pack()
+
+def submit_reply(post_id, reply_text):
+    global reply_window
+    # Send the reply data to the server
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    # Send post reply data to the server
+    reply_data = f'post_reply:{reply_text}:{userid}:{post_id}'
+    client_socket.send(reply_data.encode('utf-8'))
+
+    # Receive response from the server
+    response = client_socket.recv(1024).decode('utf-8')
+    print(f"Response received: {response}")
+    client_socket.close()
+
+    if "リプライ投稿成功" in response:  # 成功メッセージが含まれているかを確認する
+        messagebox.showinfo("リプライ成功", "リプライが投稿されました。")
+        reply_window.destroy()
+    else:
+        messagebox.showerror("エラー", f"リプライの投稿に失敗しました: {response}")
+        
+def get_replies(tree):
+    global display_replies_window
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("Error", "Please select a post to view replies.")
+        return
+
+    values = tree.item(selected_item, "values")
+    post_id = values[0]
+
+    # Fetch replies associated with the selected post
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    # Send a request to get replies for the selected post
+    get_replies_data = f'get_replies:{post_id}'
+    client_socket.send(get_replies_data.encode('utf-8'))
+
+    # Receive replies data from the server
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response != "この投稿にはリプライがありません":
+        display_replies_window_content(response)
+    else:
+        messagebox.showerror("リプライ表示失敗", "リプライが見つかりませんでした。")
+
+display_replies_window = None
+
+# Function to display replies in a new window
+def display_replies_window_content(replies_data):
+    global display_replies_window, search_result_window, followed_posts_window
+    
+    if search_result_window:
+        search_result_window.destroy()
+        
+    if followed_posts_window:
+        followed_posts_window.destroy()
+    
+    if display_replies_window and display_replies_window.winfo_exists():
+        display_replies_window.destroy()
+    
+    display_replies_window = tk.Toplevel()
+    display_replies_window.geometry("650x350")
+    display_replies_window.title("選択された投稿のリプライ一覧")
+
+    label_replies = tk.Label(display_replies_window, text="リプライ:")
+    label_replies.pack()
+
+    tree = ttk.Treeview(display_replies_window, columns=("ID", "Username", "Reply"), show="headings")
+    tree.heading("ID", text="ID")
+    tree.heading("Username", text="Username")
+    tree.heading("Reply", text="Reply")
+    tree.column("ID", anchor="center", width=40)
+    tree.column("Username", anchor="center", width=80)
+    tree.column("Reply", anchor="w")
+    tree.pack()
+
+    # Process the replies data and display them in the Treeview
+    for reply_data in replies_data.split("\n"):
+        if ":" in reply_data:
+            try:
+                reply_id, username, reply_text = reply_data.split(":", 2)
+                tree.insert("", "end", values=(reply_id, username, reply_text))
+            except ValueError:
+                print("Error: Unable to split reply data:", reply_data)
+                continue
+        else:
+            tree.insert("", "end", values=("", "", reply_data))
+            
+    reply_button = tk.Button(display_replies_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
+    reply_button.pack()
+    view_reply_button = tk.Button(display_replies_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
+    view_reply_button.pack()
+
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
 label_mail.pack()
