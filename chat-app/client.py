@@ -650,7 +650,45 @@ def display_followed_users_posts(posts_data):
     reply_button.pack()
     view_reply_button = tk.Button(followed_posts_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
     view_reply_button.pack()
+    like_button = tk.Button(followed_posts_window, text="いいね", command=lambda: like_post(tree))
+    like_button.pack()
             
+# def like_post(tree):
+#     selected_item = tree.selection()
+#     if selected_item:
+#         post_id = tree.item(selected_item)['values'][0]
+#         message = f"like_post:{post_id}:{userid}"
+#         print("いいねが押されました:", post_id)  
+#     else:
+#         print("投稿が選択されていません")
+def like_post(tree):
+    global followed_users_window
+
+    selected_item = tree.selection()
+    if not selected_item:
+        messagebox.showerror("エラー", "いいねするユーザーを選択してください。")
+        return
+
+    values = tree.item(selected_item, "values")
+    post_id = values[0]
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_host = 'localhost'
+    server_port = 12345
+    client_socket.connect((server_host, server_port))
+
+    unfollow_user_data = f'like_post:{post_id}:{userid}'
+    client_socket.send(unfollow_user_data.encode('utf-8'))
+
+    response = client_socket.recv(1024).decode('utf-8')
+    client_socket.close()
+
+    if response == "いいね成功":
+        messagebox.showinfo("いいね成功", "いいねしました.")
+    else:
+        messagebox.showerror("いいね失敗", f"いいねに失敗しました: {response}") 
+
+    
 def reply_to_post(tree):
     global reply_window
     
