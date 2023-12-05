@@ -389,13 +389,15 @@ def display_search_result(posts_data):
     label_search_result = tk.Label(search_result_window, text="投稿検索結果:")
     label_search_result.pack()
 
-    tree = ttk.Treeview(search_result_window, columns=("ID", "Username", "Post"), show="headings")
+    tree = ttk.Treeview(search_result_window, columns=("ID", "Username", "Post", "Likes"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Post", text="Post")
+    tree.heading("Likes", text="Likes")
     tree.column("ID", anchor="center", width=40)
     tree.column("Username", anchor="center", width=80)
     tree.column("Post", anchor="w")
+    tree.column("Likes", anchor="center", width=50)
     tree.pack()
 
     # Split the data by newline character and iterate over each line
@@ -405,18 +407,21 @@ def display_search_result(posts_data):
             # Split each line by the ":" separator
             try:
                 post_id, username, post_text = post_data.split(":", 2)
-                tree.insert("", "end", values=(post_id, username, post_text))
+                likes = get_likes_count(int(post_id))  # Retrieve the likes count for the post
+                tree.insert("", "end", values=(post_id, username, post_text, likes))
             except ValueError:
                 print("Error: Unable to split post data:", post_data)
                 continue
         else:
             # If the delimiter is not found, treat the entire post_data as the post text
-            tree.insert("", "end", values=("", "", post_data))
+            tree.insert("", "end", values=("", "", post_data, ""))
             
     reply_button = tk.Button(search_result_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
     reply_button.pack()
     view_reply_button = tk.Button(search_result_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
     view_reply_button.pack()
+    like_button = tk.Button(search_result_window, text="いいね", command=lambda: like_post(tree))
+    like_button.pack()
         
 root = tk.Tk()
 root.geometry("400x400")
@@ -622,13 +627,15 @@ def display_followed_users_posts(posts_data):
     label_followed_posts = tk.Label(followed_posts_window, text="フォローしているユーザーの最新投稿:")
     label_followed_posts.pack()
 
-    tree = ttk.Treeview(followed_posts_window, columns=("ID", "Username", "Post"), show="headings")
+    tree = ttk.Treeview(followed_posts_window, columns=("ID", "Username", "Post", "Likes"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Post", text="Post")
+    tree.heading("Likes", text="Likes")
     tree.column("ID", anchor="center", width=40)
     tree.column("Username", anchor="center", width=80)
     tree.column("Post", anchor="w")
+    tree.column("Likes", anchor="center", width=50)
     tree.pack()
 
     # Split the data by newline character and iterate over each line
@@ -638,13 +645,14 @@ def display_followed_users_posts(posts_data):
             # Split each line by the ":" separator
             try:
                 post_id, username, post_text = post_data.split(":", 2)
-                tree.insert("", "end", values=(post_id, username, post_text))
+                likes = get_likes_count(int(post_id))  # Retrieve the likes count for the post
+                tree.insert("", "end", values=(post_id, username, post_text, likes))
             except ValueError:
                 print("Error: Unable to split post data:", post_data)
                 continue
         else:
             # If the delimiter is not found, treat the entire post_data as the post text
-            tree.insert("", "end", values=("", "", post_data))
+            tree.insert("", "end", values=("", "", post_data, ""))
             
     reply_button = tk.Button(followed_posts_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
     reply_button.pack()
@@ -652,6 +660,14 @@ def display_followed_users_posts(posts_data):
     view_reply_button.pack()
     like_button = tk.Button(followed_posts_window, text="いいね", command=lambda: like_post(tree))
     like_button.pack()
+    
+def get_likes_count(post_id):
+    conn = sqlite3.connect('user.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM likes WHERE post_id = ?', (post_id,))
+    likes_count = cursor.fetchone()[0]
+    conn.close()
+    return likes_count
             
 # def like_post(tree):
 #     selected_item = tree.selection()
@@ -684,6 +700,8 @@ def like_post(tree):
     client_socket.close()
 
     if response == "いいね成功":
+        likes_count = get_likes_count(int(post_id))  # Get the updated like count
+        tree.item(selected_item, values=(post_id, values[1], values[2], likes_count))
         messagebox.showinfo("いいね成功", "いいねしました.")
     else:
         messagebox.showerror("いいね失敗", f"いいねに失敗しました: {response}") 
@@ -787,13 +805,15 @@ def display_replies_window_content(replies_data):
     label_replies = tk.Label(display_replies_window, text="リプライ:")
     label_replies.pack()
 
-    tree = ttk.Treeview(display_replies_window, columns=("ID", "Username", "Reply"), show="headings")
+    tree = ttk.Treeview(display_replies_window, columns=("ID", "Username", "Reply", "Likes"), show="headings")
     tree.heading("ID", text="ID")
     tree.heading("Username", text="Username")
     tree.heading("Reply", text="Reply")
+    tree.heading("Likes", text="Likes")
     tree.column("ID", anchor="center", width=40)
     tree.column("Username", anchor="center", width=80)
     tree.column("Reply", anchor="w")
+    tree.column("Likes", anchor="center", width=50)
     tree.pack()
 
     # Process the replies data and display them in the Treeview
@@ -801,17 +821,20 @@ def display_replies_window_content(replies_data):
         if ":" in reply_data:
             try:
                 reply_id, username, reply_text = reply_data.split(":", 2)
-                tree.insert("", "end", values=(reply_id, username, reply_text))
+                likes = get_likes_count(int(reply_id))
+                tree.insert("", "end", values=(reply_id, username, reply_text, likes))
             except ValueError:
                 print("Error: Unable to split reply data:", reply_data)
                 continue
         else:
-            tree.insert("", "end", values=("", "", reply_data))
+            tree.insert("", "end", values=("", "", reply_data, ""))
             
     reply_button = tk.Button(display_replies_window, text="選択した投稿にリプライ", command=lambda: reply_to_post(tree))
     reply_button.pack()
     view_reply_button = tk.Button(display_replies_window, text="選択した投稿のリプライを表示", command=lambda: get_replies(tree))
     view_reply_button.pack()
+    like_button = tk.Button(display_replies_window, text="いいね", command=lambda: like_post(tree))
+    like_button.pack()
 
 # ユーザー名とパスワードの入力フィールド
 label_mail = tk.Label(root, text="メールアドレス:")
