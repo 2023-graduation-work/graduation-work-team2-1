@@ -98,6 +98,14 @@ def register():
     # Change the command to call the register function
     register2_button = tk.Button(register_page, text="登録", command=register_user)
     register2_button.pack()
+    
+    back_button = tk.Button(register_page, text="戻る", command=back)
+    back_button.pack()
+
+def back():
+    global root, register_page
+    register_page.destroy()
+    root.deiconify()
 
 def register_user():
     username = entry_newusername.get()
